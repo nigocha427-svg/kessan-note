@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="決算ノート">
+<meta name="theme-color" content="#0017C1">
+<title>決算ノート</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+Mono:wght@400;700&display=swap">
+<script>
+  // テーマ（自動/ライト/ダーク）は描画前に当てて、ちらつきを防ぐ
+  try { const t = localStorage.getItem('kessan-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+/* ───── 色：デジタル庁デザインシステムのトークンに沿う（ブルー＋ニュートラル） ───── */
+:root{
+  --bg:#fff; --surface:#fff; --surface-2:#f2f2f2; --ink:#1a1a1a; --ink2:#333; --muted:#4d4d4d;
+  --line:#ccc; --line-strong:#949494; --divider:#e6e6e6;
+  --primary:#0017c1; --primary-hover:#00118f; --primary-active:#000071; --on-primary:#fff;
+  --tint:#e8f1fe; --tint-2:#d9e6ff; --link:#0017c1;
+  --ok:#197a4b; --ok-bg:#e6f5ec; --ng:#ec0000; --ng-bg:#fdeeee; --warn:#b78f00; --warn-bg:#fbf5e0; --warn-ink:#604b00;
+  --focus:#ffd43d;
+  /* 図解の色（種類ごと） */
+  --k-rev:#0031d8; --k-rev-bg:#d9e6ff;
+  --k-cost:#c04a00; --k-cost-bg:#ffe8d9;
+  --k-profit:#197a4b; --k-profit-bg:#d6f1e1;
+  --k-gray:#666; --k-gray-bg:#e6e6e6;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  --ease:cubic-bezier(.33,1,.68,1);
+}
+:root[data-theme="dark"]{
+  --bg:#111316; --surface:#1a1d21; --surface-2:#23272c; --ink:#ecedf1; --ink2:#d5d8de; --muted:#b8bec6;
+  --line:#353b43; --line-strong:#6e7680; --divider:#2b3037;
+  --primary:#3460fb; --primary-hover:#264af4; --primary-active:#0031d8; --on-primary:#fff;
+  --tint:#1b2a4a; --tint-2:#233a6b; --link:#9db7f9;
+  --ok:#5dd592; --ok-bg:#12301f; --ng:#ff8878; --ng-bg:#3a1a17; --warn:#e8c34a; --warn-bg:#2b2717; --warn-ink:#f0dc9a;
+  --k-rev:#9db7f9; --k-rev-bg:#1b2a4a;
+  --k-cost:#ffa573; --k-cost-bg:#3a2316;
+  --k-profit:#5dd592; --k-profit-bg:#12301f;
+  --k-gray:#b8bec6; --k-gray-bg:#2b3037;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111316; --surface:#1a1d21; --surface-2:#23272c; --ink:#ecedf1; --ink2:#d5d8de; --muted:#b8bec6;
+    --line:#353b43; --line-strong:#6e7680; --divider:#2b3037;
+    --primary:#3460fb; --primary-hover:#264af4; --primary-active:#0031d8; --on-primary:#fff;
+    --tint:#1b2a4a; --tint-2:#233a6b; --link:#9db7f9;
+    --ok:#5dd592; --ok-bg:#12301f; --ng:#ff8878; --ng-bg:#3a1a17; --warn:#e8c34a; --warn-bg:#2b2717; --warn-ink:#f0dc9a;
+    --k-rev:#9db7f9; --k-rev-bg:#1b2a4a;
+    --k-cost:#ffa573; --k-cost-bg:#3a2316;
+    --k-profit:#5dd592; --k-profit-bg:#12301f;
+    --k-gray:#b8bec6; --k-gray-bg:#2b3037;
+  }
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;color:var(--ink);background:var(--bg);
+  font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-weight:400;font-size:16px;line-height:1.7}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+main{max-width:640px;margin:0 auto;padding:calc(var(--safe-t) + 12px) 16px calc(var(--safe-b) + 56px);overflow-x:clip}
+h1{font-size:28px;font-weight:700;margin:0;line-height:1.4}
+h2{font-size:20px;font-weight:700;margin:32px 0 12px;line-height:1.5}
+h3{font-size:17px;font-weight:700;margin:0 0 8px;line-height:1.5}
+p{margin:8px 0}
+.muted{color:var(--muted);font-size:14px}
+.num{font-variant-numeric:tabular-nums}
+.i{width:1.25em;height:1.25em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* フォーカス：DADS の二重リング（黄＋黒）。変更しない */
+:focus-visible{outline:4px solid #000;outline-offset:2px;box-shadow:0 0 0 2px var(--focus);border-radius:4px}
+:root[data-theme="dark"] :focus-visible{outline-color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :focus-visible{outline-color:#fff}}
+
+/* ボタン（塗り／アウトライン） */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--primary);border-radius:8px;padding:10px 20px;min-height:52px;
+  background:var(--primary);color:var(--on-primary);font-weight:700;font-size:17px;line-height:1.4;text-decoration:none;
+  transition:background .15s var(--ease),transform .12s var(--ease)}
+.btn:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn:active{background:var(--primary-active);border-color:var(--primary-active);transform:translateY(1px)}
+.btn.sub{background:var(--surface);color:var(--link);border-color:var(--primary)}
+.btn.sub:hover{background:var(--tint)}
+.btn.block{width:100%}
+.btn:disabled{background:var(--surface-2);border-color:var(--line);color:var(--muted);pointer-events:none}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>.btn{flex:1}
+.link{border:0;background:none;color:var(--link);padding:6px 0;font-size:16px;text-align:left;text-decoration:underline;text-underline-offset:3px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.callout{border-left:6px solid var(--primary);background:var(--tint);border-radius:4px 12px 12px 4px;padding:12px 16px;margin:16px 0}
+.callout .k{font-size:14px;font-weight:700;color:var(--primary)}
+:root[data-theme="dark"] .callout .k{color:var(--link)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .callout .k{color:var(--link)}}
+.callout.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.callout.warn .k{color:var(--warn-ink)}
+.callout.memo{border-left-color:var(--line-strong);background:var(--surface-2)}
+.callout.memo .k{color:var(--muted)}
+.callout p{margin:4px 0 0}
+
+/* ───── ホーム ───── */
+.hero{margin:8px 0 8px}
+.logo{display:flex;align-items:center;gap:12px;font-size:32px;font-weight:700;line-height:1.2}
+.logo .mark{width:44px;height:44px;border-radius:10px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.logo .mark svg{width:28px;height:28px}
+.tagline{color:var(--muted);font-size:15px;margin:6px 0 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+.stat{background:var(--tint);border-radius:12px;padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:30px;line-height:1.2;color:var(--primary)}
+:root[data-theme="dark"] .stat b{color:var(--link)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .stat b{color:var(--link)}}
+.stat span{font-size:13px;color:var(--ink2)}
+.chapbar{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:15px}
+.chapbar .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chapbar .pct{font-size:14px;color:var(--muted);width:44px;text-align:right}
+.track{flex:0 0 80px;height:10px;border-radius:99px;background:var(--divider);overflow:hidden}
+.track i{display:block;height:100%;background:var(--primary);width:0;transition:width .8s var(--ease)}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mode{display:flex;flex-direction:column;align-items:flex-start;gap:4px;border:2px solid var(--primary);border-radius:12px;padding:16px;min-height:120px;text-align:left;
+  background:var(--surface);color:var(--ink);transition:background .15s var(--ease),transform .12s var(--ease)}
+.mode:hover{background:var(--tint)}
+.mode:active{transform:translateY(1px)}
+.mode .ic{width:44px;height:44px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:auto}
+.mode .ic .i{width:26px;height:26px}
+.mode b{font-size:19px}
+.mode small{font-size:13px;color:var(--muted)}
+
+/* ───── アコーディオン ───── */
+.accs{display:flex;flex-direction:column;gap:12px}
+.acc{background:var(--surface);border:1px solid var(--line-strong);border-radius:12px}
+.acc-h{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;text-align:left;padding:12px 14px;min-height:60px;border-radius:12px}
+.acc-h:hover{background:var(--tint)}
+.pno{font-weight:700;font-size:13px;color:var(--on-primary);background:var(--primary);border-radius:6px;padding:2px 8px;flex:none;white-space:nowrap}
+.acc-h .ptl{flex:1;min-width:0;font-weight:700;font-size:16px;line-height:1.5}
+.acc-h .sub{display:block;font-size:13px;color:var(--muted);font-weight:400}
+.acc-h .pct{font-size:14px;color:var(--muted);min-width:44px;text-align:right}
+.acc-h .chev{color:var(--muted);transition:transform .3s var(--ease)}
+.acc.open .acc-h .chev{transform:rotate(90deg)}
+.acc-b{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s var(--ease)}
+.acc.open .acc-b{grid-template-rows:1fr}
+.acc-in{overflow:hidden;min-height:0;visibility:hidden}
+.acc.open .acc-in{visibility:visible}
+.acc-pad{padding:0 14px 14px;border-top:1px solid var(--divider);margin:0 14px;padding-left:0;padding-right:0}
+.acc-row{display:flex;align-items:center}
+.acc-row .acc-h{flex:1;min-width:0}
+.selall{flex:none;border:2px solid var(--line-strong);background:var(--surface);border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700;min-height:40px;margin-right:12px}
+.selall.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.selall.some{border-color:var(--primary);color:var(--link)}
+
+/* ───── 学習 ───── */
+.topbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:12px;margin:calc(-12px - var(--safe-t)) -16px 16px;
+  padding:calc(var(--safe-t) + 10px) 16px 10px;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .2s}
+.topbar.stuck{border-bottom-color:var(--line)}
+.round{width:48px;height:48px;border-radius:50%;border:2px solid var(--line-strong);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.round:hover{background:var(--tint)}
+.topbar .ttl{font-size:19px;font-weight:700;flex:1;min-width:0;line-height:1.4}
+.chap{display:flex;align-items:center;gap:10px;margin:20px 0 10px}
+.chap .n{font-size:17px;font-weight:700}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line-strong);border-radius:8px;padding:10px 12px;min-height:56px}
+.item:hover{background:var(--tint)}
+.item .sid{font-size:13px;color:var(--muted);min-width:44px}
+.item .t{flex:1;font-weight:700;line-height:1.5}
+.item .star{font-size:13px;font-weight:700;color:var(--primary);background:var(--tint);border-radius:99px;padding:1px 10px}
+.item .i{color:var(--muted)}
+.crumb{font-size:14px;color:var(--muted);margin:0 0 8px}
+.core{background:var(--tint);border-radius:12px;padding:14px 16px;margin:12px 0 4px;border:2px solid var(--primary)}
+.core .k{font-size:13px;font-weight:700;color:var(--primary)}
+:root[data-theme="dark"] .core .k{color:var(--link)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .core .k{color:var(--link)}}
+.core .v{font-size:18px;font-weight:700;line-height:1.6}
+.points{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.points li{position:relative;padding:0 0 0 22px}
+.points li::before{content:"";position:absolute;left:3px;top:.7em;width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.check{list-style:none;padding:0;margin:0}
+.check li{display:flex;gap:10px;margin:8px 0}
+.check li::before{content:"";width:18px;height:18px;border:2px solid var(--primary);border-radius:4px;margin-top:4px;flex:none}
+.term{padding:10px 0;border-top:1px solid var(--divider)}
+.term:first-child{border-top:0;padding-top:0}
+.term:last-child{padding-bottom:0}
+.term .tt{font-weight:700}
+.term .td{color:var(--ink2);font-size:15px}
+.search{width:100%;border:2px solid var(--line-strong);border-radius:8px;padding:10px 12px;min-height:52px;background:var(--surface);font-size:17px}
+
+/* ───── 図解ブロック ───── */
+.blk{margin:24px 0 0}
+.blk-t{font-size:16px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.blk-t::before{content:"";width:6px;height:20px;background:var(--primary);border-radius:3px}
+.blk-n{font-size:14px;color:var(--muted);margin:8px 0 0}
+.fchip{display:inline-block;padding:4px 10px;border-radius:8px;border:2px solid var(--k-gray);background:var(--k-gray-bg);font-weight:700;line-height:1.4;font-size:15px}
+.fchip.k-rev,.kb.k-rev{border-color:var(--k-rev);background:var(--k-rev-bg)}
+.fchip.k-cost,.kb.k-cost{border-color:var(--k-cost);background:var(--k-cost-bg)}
+.fchip.k-profit,.kb.k-profit{border-color:var(--k-profit);background:var(--k-profit-bg)}
+.fchip.k-gray,.kb.k-gray{border-color:var(--k-gray);background:var(--k-gray-bg)}
+.formula{background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;padding:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.f-op{font-weight:700;font-size:20px;color:var(--muted)}
+.f-label{font-weight:700}
+.frac{display:inline-flex;flex-direction:column;align-items:center;gap:0}
+.frac .n,.frac .d{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;padding:4px 6px}
+.frac .n{border-bottom:3px solid var(--ink)}
+.f-times{font-weight:700}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line-strong);border-radius:8px;-webkit-overflow-scrolling:touch}
+.tbl-hint{font-size:12px;color:var(--muted);text-align:right;margin:4px 2px 0}
+table.tbl{border-collapse:collapse;width:100%;font-size:15px;line-height:1.5}
+.tbl th,.tbl td{padding:8px 8px;border-bottom:1px solid var(--divider);text-align:left;vertical-align:top}
+.tbl th{background:var(--surface-2);font-weight:700;white-space:nowrap;border-bottom:2px solid var(--line-strong)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.r,.tbl th.r{text-align:right;font-variant-numeric:tabular-nums}
+.tbl td.c,.tbl th.c{text-align:center}
+.tbl tr.hl td{background:var(--tint);font-weight:700}
+.tbl td.pos{color:var(--ok);font-weight:700;text-align:center;font-size:18px}
+.tbl td.neg{color:var(--ng);font-weight:700;text-align:center;font-size:18px}
+.tbl td.zero{color:var(--muted);font-weight:700;text-align:center;font-size:16px}
+.stack{display:flex;align-items:stretch;gap:10px}
+.stack .scol{flex:1;min-width:0;display:flex;flex-direction:column}
+.stack .sh{font-weight:700;text-align:center;padding:4px 0}
+.stack .sbody{display:flex;flex-direction:column;height:300px;border:2px solid var(--ink);border-radius:8px;overflow:hidden}
+.stack .sc{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-bottom:2px solid var(--ink);min-height:0;overflow:hidden}
+.stack .sc:last-child{border-bottom:0}
+.stack .sc b{font-size:14px;line-height:1.35}
+.stack .sc span{font-size:12px;color:var(--ink2)}
+.stack .eq{align-self:center;font-weight:700;font-size:22px;color:var(--muted)}
+.ladder{display:flex;flex-direction:column;gap:6px}
+.lrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px;align-items:center}
+.lrow .ll{font-size:14px;line-height:1.4;display:flex;gap:6px;align-items:baseline}
+.lrow .ll i{font-style:normal;font-weight:700;width:1.1em;color:var(--muted);flex:none}
+.lrow .lb{position:relative;height:30px;background:var(--divider);border-radius:6px}
+.lrow .lb u{position:absolute;left:0;top:0;bottom:0;border-radius:6px;border:2px solid var(--k-gray);background:var(--k-gray-bg)}
+.lrow.k-rev .lb u{border-color:var(--k-rev);background:var(--k-rev-bg)}
+.lrow.k-cost .lb u{border-color:var(--k-cost);background:var(--k-cost-bg)}
+.lrow.k-profit .lb u{border-color:var(--k-profit);background:var(--k-profit-bg)}
+.lrow .lb span{position:absolute;right:6px;top:0;bottom:0;display:flex;align-items:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.lrow.big .ll{font-weight:700}
+.lrow.big .lb{height:36px}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:minmax(72px,30%) 1fr;gap:10px;align-items:center}
+.bar .bl{font-size:14px;line-height:1.35}
+.bar .bb{position:relative;height:30px;background:var(--divider);border-radius:6px}
+.bar .bb u{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--k-rev-bg);border:2px solid var(--k-rev);min-width:2px}
+.bar.hl .bb u{background:var(--k-profit-bg);border-color:var(--k-profit)}
+.bar.neg .bb u{background:var(--k-cost-bg);border-color:var(--k-cost)}
+.bar .bb span{position:absolute;left:8px;top:0;bottom:0;display:flex;align-items:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+.flow.v{flex-direction:column}
+.fbox{flex:1 1 120px;min-width:0;border:2px solid var(--k-gray);background:var(--k-gray-bg);border-radius:10px;padding:8px 10px;text-align:center}
+.fbox b{display:block;line-height:1.4}
+.fbox small{display:block;font-size:13px;color:var(--ink2);line-height:1.45;margin-top:2px}
+.fbox.k-rev{border-color:var(--k-rev);background:var(--k-rev-bg)}
+.fbox.k-cost{border-color:var(--k-cost);background:var(--k-cost-bg)}
+.fbox.k-profit{border-color:var(--k-profit);background:var(--k-profit-bg)}
+.farrow{display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700;font-size:20px;flex:none;min-width:20px}
+.flow.v .farrow{transform:rotate(90deg);min-height:20px}
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.cmpc{border:2px solid var(--k-gray);border-radius:12px;padding:12px;background:var(--surface)}
+.cmpc.k-rev{border-color:var(--k-rev);background:var(--k-rev-bg)}
+.cmpc.k-cost{border-color:var(--k-cost);background:var(--k-cost-bg)}
+.cmpc.k-profit{border-color:var(--k-profit);background:var(--k-profit-bg)}
+.cmpc h4{margin:0 0 6px;font-size:16px}
+.cmpc ul{margin:0;padding-left:20px;font-size:15px;line-height:1.55}
+.cmpc li{margin:2px 0}
+/* 触って確かめる計算機 */
+.calc{border:2px solid var(--primary);border-radius:12px;padding:14px;background:var(--surface)}
+.calc .cin{margin:6px 0}
+.calc .cin label{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:700}
+.calc .cin output{font-variant-numeric:tabular-nums;color:var(--primary)}
+:root[data-theme="dark"] .calc .cin output{color:var(--link)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .calc .cin output{color:var(--link)}}
+.calc input[type=range]{width:100%;height:32px;margin:0;accent-color:var(--primary)}
+.calc .couts{margin-top:12px;padding:8px;border:2px solid var(--primary);border-radius:10px;background:var(--surface);display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.calc .couts.stick{position:sticky;bottom:calc(var(--safe-b) + 8px);z-index:5;box-shadow:0 -6px 12px -6px rgba(0,0,0,.25)}
+.calc .cout{display:flex;flex-direction:column;justify-content:space-between;gap:0;padding:6px 8px;border-radius:8px;background:var(--tint);align-items:stretch}
+.calc .cout.main{grid-column:1 / -1;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px}
+.calc .cout b{font-variant-numeric:tabular-nums;font-size:17px;white-space:nowrap}
+.calc .cout.neg b{color:var(--ng)}
+.calc .cout span{font-size:12.5px;font-weight:700;line-height:1.35}
+.calc .cout.main{border:2px solid var(--primary);background:var(--tint-2)}
+.calc .cnote{font-size:14px;color:var(--muted);margin-top:8px}
+
+/* ───── 演習 ───── */
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:2px solid var(--line-strong);background:var(--surface);border-radius:8px;padding:6px 14px;font-size:15px;font-weight:700;min-height:44px;
+  display:inline-flex;align-items:center;gap:8px;text-align:left}
+.chip:hover{background:var(--tint)}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.qbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:12px;margin:calc(-12px - var(--safe-t)) -16px 16px;
+  padding:calc(var(--safe-t) + 10px) 16px 10px;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .2s}
+.qbar.stuck{border-bottom-color:var(--line)}
+.prog{flex:1;height:12px;border-radius:99px;background:var(--divider);overflow:hidden}
+.prog i{display:block;height:100%;border-radius:99px;background:var(--primary);transition:width .4s var(--ease)}
+.qcount{font-size:15px;color:var(--muted)}
+.qcard{background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;padding:16px}
+.q-meta{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{font-size:12px;font-weight:700;color:var(--on-primary);background:var(--primary);border-radius:6px;padding:1px 8px}
+.orig{font-size:12px;font-weight:700;color:var(--link);border:1.5px solid currentColor;border-radius:6px;padding:0 6px;white-space:nowrap}
+.q-meta .sec{flex:1;min-width:0}
+.q-prompt{font-size:18px;font-weight:700;line-height:1.65;margin:12px 0 4px}
+.choices{margin-top:12px}
+.choice{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:2px solid var(--line-strong);border-radius:8px;
+  padding:10px 12px;margin:10px 0;min-height:56px;line-height:1.5}
+.choice:hover:not(:disabled){background:var(--tint)}
+.choice:disabled{color:var(--ink);opacity:1;cursor:default}
+.choice .key{width:30px;height:30px;border-radius:50%;background:var(--surface-2);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:14px;font-weight:700}
+.choice.ok{border-color:var(--ok);background:var(--ok-bg)}
+.choice.ok .key{background:var(--ok);color:#fff}
+.choice.ng{border-color:var(--ng);background:var(--ng-bg)}
+.choice.ng .key{background:var(--ng);color:#fff}
+.choice.dim{opacity:.6}
+.tf{display:flex;gap:12px;margin-top:14px}
+.tf .choice{justify-content:center;min-height:80px;margin:0}
+.tfm{width:34px;height:34px;stroke-width:3}
+.verdict{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:700;margin:20px 0 4px}
+.verdict.ok{color:var(--ok)}
+.verdict.ng{color:var(--ng)}
+.explain{margin:0 0 6px}
+.answer{background:var(--tint);border-radius:8px;padding:12px 14px;margin:14px 0 0}
+.answer .k{font-size:13px;font-weight:700;color:var(--muted)}
+.answer .v{font-size:18px;font-weight:700}
+.numin{display:flex;gap:8px;align-items:center;margin-top:12px}
+.numin input{flex:1;min-width:0;border:2px solid var(--line-strong);border-radius:8px;padding:10px 12px;font-size:20px;min-height:56px;background:var(--surface);text-align:right;font-variant-numeric:tabular-nums}
+.numin .u{font-weight:700;font-size:17px;white-space:nowrap}
+.ord-pool,.ord-ans{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ord-ans{min-height:60px;border:2px dashed var(--line-strong);border-radius:8px;padding:8px}
+.ord-ans:empty::before{content:"ここに順番に並べる";color:var(--muted);font-size:14px}
+.ord-ans .chip{background:var(--tint);border-color:var(--primary)}
+.ord-ans .chip.ok{background:var(--ok-bg);border-color:var(--ok)}
+.ord-ans .chip.ng{background:var(--ng-bg);border-color:var(--ng)}
+.ord-ans .chip b{color:var(--primary);min-width:1.2em}
+.ord-pool .chip.used{opacity:.35;pointer-events:none}
+
+/* ───── 結果 ───── */
+.result-hero{text-align:center;margin:12px 0}
+.score{font-size:64px;line-height:1.1;margin:6px 0 0;font-weight:700;color:var(--primary)}
+:root[data-theme="dark"] .score{color:var(--link)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .score{color:var(--link)}}
+.score small{font-size:22px;color:var(--muted)}
+.miss{padding:12px 0;border-top:1px solid var(--divider)}
+.miss:first-child{border-top:0;padding-top:0}
+.miss:last-child{padding-bottom:0}
+.miss .q{font-weight:700;margin:2px 0}
+
+/* ───── 設定 ───── */
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg3 .chip{justify-content:center}
+.filerow{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--divider);font-size:14px}
+.filerow:first-child{border-top:0;padding-top:0}
+.filerow:last-child{padding-bottom:0}
+.filerow b{font-weight:700;word-break:break-all}
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 24px);transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:12px 18px;border-radius:8px;font-size:15px;font-weight:700;z-index:20;max-width:90%;animation:fade-slide .3s var(--ease)}
+
+/* ───── 動き（控えめ） ───── */
+@keyframes route-fwd{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:none}}
+@keyframes route-back{from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:none}}
+.enter-fwd{animation:route-fwd .32s var(--ease) both}
+.enter-back{animation:route-back .32s var(--ease) both}
+@keyframes fade-slide{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.enter-q{animation:rise .35s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+[data-anim] .stagger>*{animation:rise .45s var(--ease) both}
+[data-anim] .stagger>*:nth-child(2){animation-delay:.05s}[data-anim] .stagger>*:nth-child(3){animation-delay:.1s}[data-anim] .stagger>*:nth-child(4){animation-delay:.15s}
+[data-anim] .stagger>*:nth-child(n+5){animation-delay:.2s}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/><path d="M8 7h7"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-o" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</svg>
+
+<main id="app"></main>
+
+<input type="file" id="file-book" accept=".json,application/json" multiple class="hidden">
+<input type="file" id="file-progress" accept=".json,application/json" class="hidden">
+
+<script>
+// ───── 保存（IndexedDB）─────
+// 本のデータも学習記録も、この端末のブラウザの中だけに保存する
+const DB_NAME = 'kessan-note';
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dbGet(key) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const r = db.transaction('kv').objectStore('kv').get(key);
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function dbSet(key, val) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const t = db.transaction('kv', 'readwrite');
+    t.objectStore('kv').put(val, key);
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+}
+
+// ───── 状態 ─────
+const S = {
+  book: null,        // { chapters:[], questions:[], parts:{}, files:[] }
+  progress: {},      // 問題ID → { n, ok, last, lastOk }
+  screen: 'home',    // home / learn / section / drill / quiz / result / terms / settings
+  readSection: null,
+  drill: { chapters: [], mode: 'all', count: 10 },
+  quiz: null,
+  termQuery: '',
+  open: new Set(),
+};
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon = (id, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const idCmp = (a, b) => a.localeCompare(b, 'ja', { numeric: true });
+const yen = n => Number(n).toLocaleString('ja-JP');
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+function allSections() { return S.book.chapters.flatMap(c => (c.sections || []).map(s => ({ ...s, chapter: c }))); }
+function findSection(id) { return allSections().find(s => s.id === id); }
+function chapterOfQuestion(q) { return q.section.split('-').slice(0, 2).join('-'); }
+const hasBook = () => S.book && S.book.chapters.length;
+
+// 本の「章」（大分類）。節の ID「1-2」の先頭が章番号
+const partOf = chId => String(chId).split('-')[0];
+function parts() {
+  const map = new Map();
+  for (const c of S.book.chapters) {
+    const p = partOf(c.id);
+    if (!map.has(p)) map.set(p, { id: p, title: S.book.parts?.[p] || `第${p}章`, chapters: [] });
+    map.get(p).chapters.push(c);
+  }
+  return [...map.values()];
+}
+const partLabel = p => p.id === '0' ? '序章' : p.id === 'A' ? '巻末' : /^\d+$/.test(p.id) ? `第${p.id}章` : p.id;
+const partRate = (qs, p) => {
+  const ids = new Set(p.chapters.map(c => c.id)), pq = qs.filter(q => ids.has(chapterOfQuestion(q)));
+  return pq.length ? pq.filter(q => S.progress[q.id]?.lastOk).length / pq.length : null;
+};
+const accKey = (scr, pid) => `${scr}:${pid}`;
+const accHead = (scr, p, sub, right = '') => `
+  <button class="acc-h" data-act="acc" data-id="${accKey(scr, p.id)}" aria-expanded="${S.open.has(accKey(scr, p.id))}">
+    <span class="pno">${esc(partLabel(p))}</span>
+    <span class="ptl">${esc(p.title)}${sub ? `<span class="sub">${sub}</span>` : ''}</span>${right}${icon('next', 'i chev')}
+  </button>`;
+const accWrap = (scr, p, head, body) =>
+  `<div class="acc ${S.open.has(accKey(scr, p.id)) ? 'open' : ''}" data-key="${accKey(scr, p.id)}">${head}
+    <div class="acc-b"><div class="acc-in"><div class="acc-pad">${body}</div></div></div></div>`;
+
+// ───── 本のデータの読み込み ─────
+// 何回かに分けて読み込んでも、章と問題はIDごとに追加・上書きされる
+function mergeBook(base, add, fileName) {
+  const book = base ? structuredClone(base) : { chapters: [], questions: [], files: [] };
+  if (add.format !== 'kessan-note/1' || !Array.isArray(add.chapters)) throw new Error('決算ノート用のデータではありません');
+  for (const ch of add.chapters) {
+    const i = book.chapters.findIndex(c => c.id === ch.id);
+    if (i >= 0) book.chapters[i] = ch; else book.chapters.push(ch);
+  }
+  for (const q of add.questions || []) {
+    const i = book.questions.findIndex(x => x.id === q.id);
+    if (i >= 0) book.questions[i] = q; else book.questions.push(q);
+  }
+  book.chapters.sort((a, b) => idCmp(a.id, b.id));
+  book.parts = { ...(book.parts || {}), ...(add.parts || {}) };
+  book.files = [...(book.files || []).filter(f => f.name !== fileName),
+    { name: fileName, source: add.source || '', at: new Date().toISOString() }];
+  return book;
+}
+document.getElementById('file-book').addEventListener('change', async e => {
+  let book = S.book, n = 0;
+  for (const f of e.target.files) {
+    try { book = mergeBook(book, JSON.parse(await f.text()), f.name); n++; }
+    catch (err) { toast(`${f.name}：${err.message}`); }
+  }
+  e.target.value = '';
+  if (!n) return;
+  S.book = book;
+  await dbSet('book', book);
+  toast(`${n}個のファイルを読み込みました`);
+  render('none');
+});
+
+// ───── 学習記録のバックアップ ─────
+function exportProgress() {
+  const blob = new Blob([JSON.stringify({ format: 'kessan-note-progress/1', progress: S.progress }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `決算ノート_学習記録_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+document.getElementById('file-progress').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.format !== 'kessan-note-progress/1') throw new Error('学習記録のファイルではありません');
+    for (const [id, p] of Object.entries(d.progress)) {
+      const cur = S.progress[id];
+      if (!cur || (p.last || '') > (cur.last || '')) S.progress[id] = p;
+    }
+    await dbSet('progress', S.progress);
+    toast('学習記録を読み込みました');
+    render('none');
+  } catch (err) { toast(err.message); }
+});
+
+// ───── テーマ ─────
+function getTheme() { try { return localStorage.getItem('kessan-theme') || 'auto'; } catch (e) { return 'auto'; } }
+function setTheme(t) {
+  try { localStorage.setItem('kessan-theme', t); } catch (e) {}
+  if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+}
+
+// ───── 図解ブロックの描画 ─────
+const OPS = new Set(['+', '−', '-', '×', '÷', '=', '(', ')', '／', '＋', '－']);
+const kcls = k => k ? ` k-${esc(k)}` : '';
+function termHtml(t) {
+  if (typeof t === 'string') return OPS.has(t) ? `<span class="f-op" aria-hidden="false">${esc(t)}</span>` : `<span class="fchip">${esc(t)}</span>`;
+  return `<span class="fchip${kcls(t.k)}">${esc(t.t)}</span>`;
+}
+const termsHtml = a => (a || []).map(termHtml).join('');
+const blkTitle = b => b.title ? `<div class="blk-t">${esc(b.title)}</div>` : '';
+const blkNote = b => b.note ? `<div class="blk-n">${esc(b.note)}</div>` : '';
+
+// 計算機の入力設定は ID で引けるように保存しておく
+const CALCS = new Map(); let calcSeq = 0;
+function fmtVal(v, fmt, unit = '') {
+  if (!isFinite(v)) return '—';
+  if (fmt === 'p') return v.toFixed(1) + '%';
+  if (fmt === 'x') return v.toFixed(2) + (unit || '');
+  if (fmt === 'd') return Math.round(v).toLocaleString('ja-JP') + (unit || '');
+  return Math.round(v).toLocaleString('ja-JP') + (unit || '');
+}
+function calcEval(cfg, vals) {
+  const env = { ...vals }, out = {};
+  for (const o of cfg.outs) {
+    try { env[o.id] = new Function(...Object.keys(env), `return (${o.f});`)(...Object.values(env)); }
+    catch (e) { env[o.id] = NaN; }
+    out[o.id] = env[o.id];
+  }
+  return out;
+}
+function calcUpdate(root) {
+  const cfg = CALCS.get(root.dataset.calc);
+  const vals = {};
+  root.querySelectorAll('input[type=range]').forEach(r => {
+    vals[r.dataset.k] = Number(r.value);
+    r.closest('.cin').querySelector('output').textContent = yen(r.value) + (r.dataset.unit || '');
+  });
+  const out = calcEval(cfg, vals);
+  cfg.outs.forEach(o => {
+    const el = root.querySelector(`[data-out="${o.id}"]`);
+    el.querySelector('b').textContent = fmtVal(out[o.id], o.fmt, o.unit);
+    el.classList.toggle('neg', out[o.id] < 0);
+  });
+}
+
+function blockHtml(b) {
+  switch (b.type) {
+    case 'p': return `<div class="blk"><p>${esc(b.text)}</p></div>`;
+    case 'callout': {
+      const lbl = { point: 'ポイント', warn: '注意', memo: 'メモ' }[b.kind || 'point'];
+      return `<div class="callout ${esc(b.kind || 'point')}"><div class="k">${esc(b.title || lbl)}</div><p>${esc(b.text)}</p></div>`;
+    }
+    case 'formula': {
+      let inner = '';
+      if (b.label) inner += `<span class="f-label">${esc(b.label)}</span><span class="f-op">＝</span>`;
+      if (b.den) {
+        inner += `<span class="frac"><span class="n">${termsHtml(b.num)}</span><span class="d">${termsHtml(b.den)}</span></span>`;
+        if (b.times) inner += `<span class="f-times">${esc(b.times)}</span>`;
+      } else inner += termsHtml(b.terms);
+      return `<div class="blk">${blkTitle(b)}<div class="formula">${inner}</div>${blkNote(b)}</div>`;
+    }
+    case 'table': {
+      const al = b.align || [];
+      const head = b.head ? `<thead><tr>${b.head.map((h, i) => `<th class="${al[i] || ''}">${esc(h)}</th>`).join('')}</tr></thead>` : '';
+      const rows = b.rows.map((r, ri) => `<tr class="${(b.hl || []).includes(ri) ? 'hl' : ''}">${r.map((c, i) => {
+        const s = String(c);
+        let cls = al[i] || '';
+        if (s === '+' || s === '＋') cls = 'pos'; else if (s === '−' || s === '－' || s === '-') cls = 'neg'; else if (s === '±0') cls = 'zero';
+        else if (!cls && /^[△▲-]?[\d,.]+(%|円|回転|日|か月)?$/.test(s)) cls = 'r';
+        return `<td class="${cls}">${esc(s === '+' ? '＋' : s === '-' ? '−' : s)}</td>`;
+      }).join('')}</tr>`).join('');
+      return `<div class="blk">${blkTitle(b)}<div class="tbl-wrap"><table class="tbl">${head}<tbody>${rows}</tbody></table></div>${blkNote(b)}</div>`;
+    }
+    case 'stack': {
+      const cols = b.cols.map(c => `<div class="scol"><div class="sh">${esc(c.title)}</div><div class="sbody">${c.items.map(it =>
+        `<div class="sc kb${kcls(it.k)}" style="flex:${Math.max(it.v, 1)} 1 0"><b>${esc(it.label)}</b>${it.sub ? `<span>${esc(it.sub)}</span>` : ''}</div>`).join('')}</div></div>`);
+      return `<div class="blk">${blkTitle(b)}<div class="stack">${cols.join(b.eq === false ? '' : '<div class="eq" aria-hidden="true">＝</div>')}</div>${blkNote(b)}</div>`;
+    }
+    case 'ladder': {
+      const max = Math.max(...b.rows.map(r => Math.abs(r.v)), 1);
+      return `<div class="blk">${blkTitle(b)}<div class="ladder">${b.rows.map(r => `
+        <div class="lrow${kcls(r.k)}${r.big ? ' big' : ''}"><div class="ll"><i>${esc(r.sign || '')}</i>${esc(r.label)}</div>
+        <div class="lb"><u style="width:${Math.max(Math.abs(r.v) / max * 100, 2)}%"></u><span>${r.v < 0 ? '△' : ''}${yen(Math.abs(r.v))}${esc(b.unit || '')}</span></div></div>`).join('')}</div>${blkNote(b)}</div>`;
+    }
+    case 'bars': {
+      const max = b.max || Math.max(...b.items.map(r => Math.abs(r.v)), 1);
+      return `<div class="blk">${blkTitle(b)}<div class="bars">${b.items.map(r => `
+        <div class="bar${r.hl ? ' hl' : ''}${r.v < 0 ? ' neg' : ''}"><div class="bl">${esc(r.label)}</div>
+        <div class="bb"><u style="width:${Math.max(Math.abs(r.v) / max * 100, 1)}%"></u><span>${r.v < 0 ? '△' : ''}${esc(String(r.text ?? yen(Math.abs(r.v))))}${esc(b.unit || '')}</span></div></div>`).join('')}</div>${blkNote(b)}</div>`;
+    }
+    case 'flow': {
+      const parts2 = b.steps.map(s => `<div class="fbox${kcls(s.k)}"><b>${esc(s.t)}</b>${s.sub ? `<small>${esc(s.sub)}</small>` : ''}</div>`);
+      const arrow = `<div class="farrow" aria-hidden="true">${esc(b.arrow || '→')}</div>`;
+      return `<div class="blk">${blkTitle(b)}<div class="flow${b.v ? ' v' : ''}">${parts2.join(b.arrow === '' ? '' : arrow)}</div>${blkNote(b)}</div>`;
+    }
+    case 'compare':
+      return `<div class="blk">${blkTitle(b)}<div class="cmp">${b.cols.map(c =>
+        `<div class="cmpc${kcls(c.k)}"><h4>${esc(c.h)}</h4><ul>${c.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}</div>${blkNote(b)}</div>`;
+    case 'calc': {
+      const id = 'c' + (++calcSeq); CALCS.set(id, b);
+      const vals = Object.fromEntries(b.inputs.map(i => [i.k, i.v]));
+      const out = calcEval(b, vals);
+      return `<div class="blk">${blkTitle(b)}<div class="calc" data-calc="${id}">
+        <div class="muted" style="margin:0 0 4px">スライダーを動かして、数字の変化を確かめてみよう</div>
+        ${b.inputs.map(i => `<div class="cin"><label><span>${esc(i.label)}</span><output>${yen(i.v)}${esc(i.unit || '')}</output></label>
+          <input type="range" data-k="${esc(i.k)}" data-unit="${esc(i.unit || '')}" min="${i.min}" max="${i.max}" step="${i.step || 1}" value="${i.v}" aria-label="${esc(i.label)}"></div>`).join('')}
+        <div class="couts${b.inputs.length > 3 ? ' stick' : ''}">${b.outs.map(o => `<div class="cout${o.main ? ' main' : ''}${out[o.id] < 0 ? ' neg' : ''}" data-out="${esc(o.id)}"><span>${esc(o.label)}</span><b>${esc(fmtVal(out[o.id], o.fmt, o.unit))}</b></div>`).join('')}</div>
+        ${b.note ? `<div class="cnote">${esc(b.note)}</div>` : ''}</div></div>`;
+    }
+  }
+  return '';
+}
+app.addEventListener('input', e => {
+  const r = e.target.closest('.calc input[type=range]');
+  if (r) calcUpdate(r.closest('.calc'));
+  if (e.target.id === 'term-q') { S.termQuery = e.target.value; document.getElementById('term-list').innerHTML = termList(); }
+});
+
+// ───── 画面の切り替え ─────
+const DEPTH = { home: 0, learn: 1, drill: 1, terms: 1, settings: 1, section: 2, quiz: 2, result: 3 };
+function go(screen) {
+  const dir = (DEPTH[screen] ?? 0) >= (DEPTH[S.screen] ?? 0) ? 'fwd' : 'back';
+  S.screen = screen;
+  render(dir);
+}
+function render(dir = 'none') {
+  if (!hasBook() && S.screen !== 'settings') S.screen = 'home';
+  ({ home: renderHome, learn: renderLearn, section: renderSection, drill: renderDrillSetup,
+     quiz: renderQuestion, result: renderResult, terms: renderTerms, settings: renderSettings })[S.screen]();
+  if (dir !== 'none') {
+    window.scrollTo(0, 0);
+    app.classList.remove('enter-fwd', 'enter-back'); void app.offsetWidth;
+    app.classList.add(dir === 'fwd' ? 'enter-fwd' : 'enter-back');
+    app.dataset.anim = '1';
+    clearTimeout(render.t);
+    render.t = setTimeout(() => delete app.dataset.anim, 1200);
+  }
+}
+app.addEventListener('animationend', e => { if (e.target === app) app.classList.remove('enter-fwd', 'enter-back'); });
+const topbar = (title, back = 'home') => `
+  <div class="topbar"><button class="round" data-act="go" data-id="${back}" aria-label="戻る">${icon('back')}</button>
+  <div class="ttl">${title}</div></div>`;
+
+// ───── ホーム ─────
+const wrongCount = () => S.book ? S.book.questions.filter(q => S.progress[q.id] && !S.progress[q.id].lastOk).length : 0;
+const LOGO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V12M12 20V5M19 20v-5"/><path d="M3 20h18"/></svg>`;
+function renderHome() {
+  const qs = S.book?.questions || [];
+  const tried = qs.filter(q => S.progress[q.id]).length;
+  const okNow = qs.filter(q => S.progress[q.id]?.lastOk).length;
+  const rate = tried ? Math.round(okNow / tried * 100) : 0;
+  const w = wrongCount();
+  app.innerHTML = `
+    <div class="hero">
+      <div class="logo"><span class="mark">${LOGO}</span>決算ノート</div>
+      <p class="tagline">決算書の読み方を、図解と問題で身につける</p>
+    </div>
+    ${hasBook() ? `
+    <div class="stagger">
+      <div class="stats">
+        <div class="stat"><b class="num" data-count="${tried}">0</b><span>解いた問題</span></div>
+        <div class="stat"><b class="num" data-count="${okNow}">0</b><span>正解した数</span></div>
+        <div class="stat"><b class="num" data-count="${rate}" data-suffix="%">0</b><span>正答率</span></div>
+      </div>
+      ${w ? `<div class="callout warn"><div class="k">復習のおすすめ</div><p>間違えた問題が${w}問あります。演習の「間違えた問題」から解き直せます。</p></div>` : ''}
+      <h2>章ごとの達成度</h2>
+      <div class="accs">${parts().map(p => {
+        const pr = partRate(qs, p);
+        const body = p.chapters.map(c => {
+          const cq = qs.filter(q => chapterOfQuestion(q) === c.id);
+          if (!cq.length) return '';
+          const r = cq.filter(q => S.progress[q.id]?.lastOk).length / cq.length;
+          return `<div class="chapbar"><span class="t">${esc(c.title)}</span><span class="track"><i data-w="${r * 100}"></i></span><span class="pct num">${Math.round(r * 100)}%</span></div>`;
+        }).join('');
+        return accWrap('home', p, accHead('home', p, '', pr === null ? '' : `<span class="pct num">${Math.round(pr * 100)}%</span>`), body);
+      }).join('')}</div>
+      <h2>モードを選ぶ</h2>
+      <div class="modes">
+        <button class="mode" data-act="go" data-id="learn"><span class="ic">${icon('book')}</span><b>学習</b><small>図解・計算式・要点</small></button>
+        <button class="mode" data-act="go" data-id="drill"><span class="ic">${icon('pen')}</span><b>演習</b><small>${qs.length}問から出題</small></button>
+        <button class="mode" data-act="go" data-id="terms"><span class="ic">${icon('list')}</span><b>用語帳</b><small>言葉を引いて確認</small></button>
+        <button class="mode" data-act="go" data-id="settings"><span class="ic">${icon('gear')}</span><b>設定</b><small>データ・表示・記録</small></button>
+      </div>
+    </div>` : `
+    <div class="stagger">
+      <div class="card" style="margin-top:20px">
+        <p style="margin-top:0">参考書のデータ（.json）は、この端末のブラウザの中だけに保存されます。インターネットには送られません。</p>
+        <button class="btn block" data-act="import">データを読み込む</button>
+      </div>
+      <div class="modes" style="margin-top:16px">
+        <button class="mode" data-act="go" data-id="settings"><span class="ic">${icon('gear')}</span><b>設定</b><small>表示の切り替えなど</small></button>
+      </div>
+    </div>`}`;
+  app.querySelectorAll('[data-count]').forEach(el => {
+    const to = +el.dataset.count, suf = el.dataset.suffix || '', t0 = performance.now(), dur = 700;
+    const step = now => {
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(to * e) + suf;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+  setTimeout(() => app.querySelectorAll('.track i[data-w]').forEach(i => i.style.width = i.dataset.w + '%'), 200);
+}
+
+// ───── 学習 ─────
+function sectionRate(secId) {
+  const qs = S.book.questions.filter(q => q.section === secId);
+  if (!qs.length) return null;
+  return qs.filter(q => S.progress[q.id]?.lastOk).length / qs.length;
+}
+function renderLearn() {
+  app.innerHTML = topbar('学習') + `<div class="accs stagger">` + parts().map(p => {
+    const nSec = p.chapters.reduce((n, c) => n + (c.sections || []).length, 0);
+    const body = p.chapters.map(c => `
+      <div class="chap"><span class="pno">${esc(c.id)}</span><span class="n">${esc(c.title)}</span></div>
+      <div class="list">${(c.sections || []).map(s => {
+        const r = sectionRate(s.id);
+        return `<button class="item" data-act="open-sec" data-id="${esc(s.id)}">
+          <span class="sid num">${esc(s.id)}</span><span class="t">${esc(s.title)}</span>
+          ${r !== null ? `<span class="star num">${Math.round(r * 100)}%</span>` : ''}${icon('next')}</button>`;
+      }).join('')}</div>`).join('');
+    return accWrap('learn', p, accHead('learn', p, `${p.chapters.length}項目・${nSec}セクション`), body);
+  }).join('') + `</div>`;
+}
+
+function renderSection() {
+  const s = findSection(S.readSection);
+  if (!s) { S.screen = 'learn'; return renderLearn(); }
+  const list = allSections(), idx = list.findIndex(x => x.id === s.id);
+  const prev = list[idx - 1], next = list[idx + 1];
+  const qn = S.book.questions.filter(q => q.section === s.id).length;
+  app.innerHTML = topbar(esc(s.title), 'learn') + `
+    <div class="crumb">${esc(s.chapter.id)} ${esc(s.chapter.title)}${s.pages ? ` ／ 本書 p.${esc(s.pages)}` : ''}</div>
+    ${s.core ? `<div class="core"><div class="k">ひとことで言うと</div><div class="v">${esc(s.core)}</div></div>` : ''}
+    ${s.points?.length ? `<h2>要点</h2><div class="card"><ul class="points">${s.points.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
+    ${s.blocks?.length ? `<h2>図解・計算</h2>${s.blocks.map(blockHtml).join('')}` : ''}
+    ${s.checklist ? `<h2>チェックリスト</h2><div class="card"><ul class="check">${s.checklist.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
+    ${s.terms?.length ? `<h2>用語</h2><div class="card">${s.terms.map(t => `<div class="term"><div class="tt">${esc(t.t)}</div><div class="td">${esc(t.d)}</div></div>`).join('')}</div>` : ''}
+    ${qn ? `<button class="btn block" style="margin-top:28px" data-act="drill-sec" data-id="${esc(s.id)}">${icon('pen')}このセクションの問題を解く（${qn}問）</button>` : ''}
+    <div class="row" style="margin-top:12px">
+      ${prev ? `<button class="btn sub" data-act="open-sec" data-id="${esc(prev.id)}" data-dir="back">${icon('back')}${esc(prev.id)}</button>` : ''}
+      ${next ? `<button class="btn sub" data-act="open-sec" data-id="${esc(next.id)}">${esc(next.id)}${icon('next')}</button>` : ''}
+    </div>`;
+}
+
+// ───── 用語帳 ─────
+function allTerms() {
+  return allSections().flatMap(s => (s.terms || []).map(t => ({ ...t, sec: s })));
+}
+function termList() {
+  const q = S.termQuery.trim().toLowerCase();
+  const ts = allTerms().filter(t => !q || t.t.toLowerCase().includes(q) || t.d.toLowerCase().includes(q))
+    .sort((a, b) => a.t.localeCompare(b.t, 'ja'));
+  if (!ts.length) return '<p class="muted">見つかりませんでした。</p>';
+  return `<div class="card">${ts.map(t => `<div class="term"><div class="tt">${esc(t.t)}</div><div class="td">${esc(t.d)}</div>
+    <button class="link" data-act="open-sec" data-id="${esc(t.sec.id)}">${esc(t.sec.id)} ${esc(t.sec.title)}</button></div>`).join('')}</div>`;
+}
+function renderTerms() {
+  app.innerHTML = topbar('用語帳') + `
+    <input id="term-q" class="search" type="search" placeholder="用語を検索（例：流動比率）" value="${esc(S.termQuery)}" aria-label="用語を検索">
+    <div id="term-list" style="margin-top:16px">${termList()}</div>`;
+}
+
+// ───── 演習 ─────
+function drillPool() {
+  const { chapters, mode } = S.drill;
+  return S.book.questions.filter(q => {
+    if (chapters.length && !chapters.includes(chapterOfQuestion(q))) return false;
+    const p = S.progress[q.id];
+    if (mode === 'new') return !p;
+    if (mode === 'wrong') return p && !p.lastOk;
+    return true;
+  });
+}
+function renderDrillSetup() {
+  const d = S.drill;
+  const pool = drillPool();
+  const n = d.count === 0 ? pool.length : Math.min(d.count, pool.length);
+  app.innerHTML = topbar('演習') + `
+    <div class="stagger">
+      <div><h2 style="margin-top:0">範囲</h2>
+      <div class="seg" style="margin-bottom:12px">
+        <button class="chip ${d.chapters.length ? '' : 'on'}" data-act="ch-all">すべての範囲</button>
+      </div>
+      <div class="accs">${parts().map(p => {
+        const sel = p.chapters.filter(c => d.chapters.includes(c.id)).length;
+        const state = sel === p.chapters.length ? 'on' : sel ? 'some' : '';
+        const body = `<div class="seg" style="padding-top:12px">${p.chapters.map(c =>
+          `<button class="chip ${d.chapters.includes(c.id) ? 'on' : ''}" data-act="ch" data-id="${esc(c.id)}">${esc(c.id)} ${esc(c.title)}</button>`).join('')}</div>`;
+        const head = `<div class="acc-row">${accHead('drill', p, sel ? `${sel}／${p.chapters.length} を選択中` : '')}
+          <button class="selall ${state}" data-act="part" data-id="${esc(p.id)}">${state === 'on' ? '選択中' : 'まとめて選ぶ'}</button></div>`;
+        return accWrap('drill', p, head, body);
+      }).join('')}</div></div>
+      <div><h2>出題</h2>
+      <div class="seg">
+        ${[['all', 'すべて'], ['new', 'まだ解いていない'], ['wrong', `間違えた問題（${wrongCount()}）`]].map(([k, l]) =>
+          `<button class="chip ${d.mode === k ? 'on' : ''}" data-act="mode" data-id="${k}">${l}</button>`).join('')}
+      </div></div>
+      <div><h2>問題数</h2>
+      <div class="seg">
+        ${[[10, '10問'], [20, '20問'], [0, '全部']].map(([k, l]) =>
+          `<button class="chip ${d.count === k ? 'on' : ''}" data-act="count" data-id="${k}">${l}</button>`).join('')}
+      </div></div>
+      <div style="margin-top:28px"><button class="btn block" data-act="start" ${n ? '' : 'disabled'}>${n ? `${n}問に挑戦` : '対象の問題がありません'}</button>
+      <p class="muted" style="text-align:center">対象の${pool.length}問からランダムに出題します</p></div>
+    </div>`;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function startQuiz(questions) {
+  // 選択肢・並べ替えの並びも毎回シャッフルする（答えの位置を覚えてしまわないように）
+  const items = questions.map(q => {
+    if (q.type === 'choice') return { q, order: shuffle(q.choices.map((_, i) => i)) };
+    if (q.type === 'order') return { q, order: shuffle(q.items.map((_, i) => i)), chosen: [] };
+    return { q };
+  });
+  S.quiz = { items, i: 0, answered: null, results: [] };
+  go('quiz');
+}
+
+const TYPE_LABEL = { choice: '選択', tf: '○×', calc: '計算', order: '並べ替え' };
+const origBadge = q => q.origin === 'original' ? '<span class="orig" title="参考書の内容をもとに作った、本にない問題">オリジナル</span>' : '';
+const fmtAnswer = q => q.type === 'choice' ? q.choices[q.answer] : q.type === 'tf' ? (q.answer ? '○（正しい）' : '×（誤り）')
+  : q.type === 'calc' ? `${q.answer.toLocaleString('ja-JP')}${q.unit || ''}` : q.items.join(' → ');
+function parseNum(s) {
+  const t = String(s).replace(/[０-９．，－−]/g, c => ({ '．': '.', '，': ',', '－': '-', '−': '-' }[c] || String.fromCharCode(c.charCodeAt(0) - 0xFEE0)))
+    .replace(/[,\s%％円]/g, '').replace(/^[△▲]/, '-');
+  return t === '' || isNaN(t) ? NaN : Number(t);
+}
+function renderQuestion(animate) {
+  const z = S.quiz, it = z.items[z.i], q = it.q, a = z.answered;
+  const sec = findSection(q.section);
+  let body = (q.blocks || []).map(blockHtml).join('');
+  if (q.type === 'choice') {
+    body += `<div class="choices" role="group">` + it.order.map((ci, n) => {
+      let cls = '';
+      if (a) cls = ci === q.answer ? 'ok' : ci === a.pick ? 'ng' : 'dim';
+      return `<button class="choice ${cls}" data-act="pick" data-id="${ci}" ${a ? 'disabled' : ''}><span class="key">${'ABCD'[n]}</span><span>${esc(q.choices[ci])}</span></button>`;
+    }).join('') + `</div>`;
+  } else if (q.type === 'tf') {
+    body += `<div class="tf">${[[true, 'o', '正しい'], [false, 'x', '誤り']].map(([v, ic, lbl]) => {
+      let cls = '';
+      if (a) cls = v === q.answer ? 'ok' : v === a.pick ? 'ng' : 'dim';
+      return `<button class="choice ${cls}" data-act="pick-tf" data-id="${v}" ${a ? 'disabled' : ''}>${icon(ic, 'i tfm')}<span>${lbl}</span></button>`;
+    }).join('')}</div>`;
+  } else if (q.type === 'calc') {
+    body += `<div class="numin"><input id="num-in" inputmode="decimal" autocomplete="off" placeholder="数字を入力" ${a ? `value="${esc(a.pick)}" disabled` : ''} aria-label="答え">
+      <span class="u">${esc(q.unit || '')}</span></div>`;
+    if (q.hint && !a) body += `<p class="muted">ヒント：${esc(q.hint)}</p>`;
+  } else if (q.type === 'order') {
+    const items = q.items;
+    body += `<div class="ord-ans" id="ord-ans">${it.chosen.map((ci, n) => {
+      const cls = a ? (ci === n ? 'ok' : 'ng') : '';
+      return `<button class="chip ${cls}" data-act="ord-del" data-id="${n}" ${a ? 'disabled' : ''}><b>${n + 1}</b>${esc(items[ci])}</button>`;
+    }).join('')}</div>
+    <div class="ord-pool">${it.order.map(ci => `<button class="chip ${it.chosen.includes(ci) ? 'used' : ''}" data-act="ord-add" data-id="${ci}" ${a ? 'disabled' : ''}>${esc(items[ci])}</button>`).join('')}</div>`;
+  }
+  const verdict = a?.ok ? '正解！' : '不正解';
+  let after = '';
+  if (a) after = `<div class="verdict ${a.ok ? 'ok' : 'ng'}" role="status">${icon(a.ok ? 'o' : 'x')}${verdict}</div>
+      ${!a.ok ? `<div class="answer"><div class="k">正しい答え</div><div class="v">${esc(fmtAnswer(q))}</div></div>` : ''}
+      <p class="explain" style="margin-top:12px">${esc(q.explain)}</p>
+      ${sec ? `<button class="link" data-act="peek" data-id="${esc(sec.id)}">要点を読み返す：${esc(sec.title)}</button>` : ''}
+      <button class="btn block" style="margin-top:18px" data-act="next">${z.i + 1 < z.items.length ? '次の問題へ' : '結果を見る'}${icon('next')}</button>`;
+  else if (q.type === 'calc') after = `<button class="btn block" style="margin-top:16px" data-act="check-calc">答え合わせ</button>`;
+  else if (q.type === 'order') after = `<button class="btn block" style="margin-top:16px" data-act="check-order" ${it.chosen.length === q.items.length ? '' : 'disabled'}>答え合わせ</button>`;
+  app.innerHTML = `
+    <div class="qbar">
+      <button class="round" data-act="quit" aria-label="やめる">${icon('close')}</button>
+      <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="${z.items.length}" aria-valuenow="${z.i + (a ? 1 : 0)}"><i style="width:${(z.i + (a ? 1 : 0)) / z.items.length * 100}%"></i></div>
+      <span class="qcount num">${z.i + 1}/${z.items.length}</span>
+    </div>
+    <div class="qcard ${animate ? 'enter-q' : ''}" id="qcard">
+      <div class="q-meta"><span class="tag">${TYPE_LABEL[q.type]}</span><span class="sec">${esc(sec ? sec.title : q.section)}</span>${origBadge(q)}</div>
+      <div class="q-prompt">${esc(q.prompt)}</div>
+      ${body}${after}
+    </div>`;
+}
+
+async function answer(ok, pickVal) {
+  const z = S.quiz, q = z.items[z.i].q;
+  z.answered = { ok, pick: pickVal };
+  z.results.push({ id: q.id, ok });
+  const p = S.progress[q.id] || { n: 0, ok: 0 };
+  p.n++; if (ok) p.ok++;
+  p.last = new Date().toISOString(); p.lastOk = ok;
+  S.progress[q.id] = p;
+  dbSet('progress', S.progress);
+  renderQuestion(false);
+  document.querySelector('.verdict')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function renderResult() {
+  const z = S.quiz, ok = z.results.filter(r => r.ok).length, total = z.results.length;
+  const rate = ok / total;
+  const wrong = z.results.filter(r => !r.ok).map(r => S.book.questions.find(q => q.id === r.id)).filter(Boolean);
+  const line = rate === 1 ? 'パーフェクトです' : rate >= .7 ? 'よくできました' : rate >= .4 ? 'あと少し。間違えたところを見直そう' : '要点を読み返してから、もう一度挑戦しよう';
+  app.innerHTML = `
+    <div class="result-hero">
+      <div class="muted" style="font-size:16px">${line}</div>
+      <div class="score num"><span data-count="${ok}">0</span><small> / ${total}問</small></div>
+      <div class="muted">正答率 ${Math.round(rate * 100)}%</div>
+    </div>
+    ${wrong.length ? `<h2>間違えた問題</h2><div class="card stagger">${wrong.map(q => `
+      <div class="miss"><div class="q-meta"><span class="sec">${esc(findSection(q.section)?.title || q.section)}</span>${origBadge(q)}</div>
+        <div class="q">${esc(q.prompt)}</div>
+        <div class="muted">答え：${esc(fmtAnswer(q))}</div>
+      </div>`).join('')}</div>
+      <button class="btn block" style="margin-top:20px" data-act="retry">間違えた${wrong.length}問にもう一度挑戦</button>` : ''}
+    <div class="row" style="margin-top:12px">
+      <button class="btn sub" data-act="go" data-id="drill">演習メニュー</button>
+      <button class="btn sub" data-act="go" data-id="home">ホーム</button>
+    </div>`;
+  const el = app.querySelector('[data-count]'), t0 = performance.now();
+  const step = now => { const p = Math.min(1, (now - t0) / 600); el.textContent = Math.round(ok * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+// ───── 設定 ─────
+function renderSettings() {
+  const t = getTheme();
+  app.innerHTML = topbar('設定') + `
+    <div class="stagger">
+      <div><h2 style="margin-top:0">表示</h2>
+      <div class="seg3">
+        ${[['auto', '自動'], ['light', 'ライト'], ['dark', 'ダーク']].map(([k, l]) =>
+          `<button class="chip ${t === k ? 'on' : ''}" data-act="theme" data-id="${k}">${l}</button>`).join('')}
+      </div>
+      <p class="muted" style="margin:8px 0 0">「自動」は端末の設定に合わせます。</p></div>
+      <div><h2>参考書のデータ</h2>
+      ${S.book?.files?.length ? `<div class="card">${S.book.files.map(f =>
+        `<div class="filerow"><b>${esc(f.name)}</b><span class="muted num">${esc(f.at.slice(0, 10))}</span></div>`).join('')}</div>` :
+        '<p class="muted">まだ読み込んでいません。</p>'}
+      <p class="muted">新しい章のファイルを読み込むと、今のデータに追加されます。同じ章は上書きされます。</p>
+      <button class="btn block" data-act="import">データを追加・更新する</button></div>
+      <div><h2>学習記録のバックアップ</h2>
+      <p class="muted" style="margin:0 0 10px">学習記録は端末ごとに保存されます。スマホとPCで記録をそろえたいときは、書き出したファイルをもう一方で読み込んでください。</p>
+      <div class="row">
+        <button class="btn sub" data-act="export">書き出す</button>
+        <button class="btn sub" data-act="import-progress">読み込む</button>
+      </div></div>
+    </div>`;
+}
+
+// ───── 操作のまとめ受け ─────
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const id = t.dataset.id, d = S.drill;
+  switch (t.dataset.act) {
+    case 'go': if (id === 'drill' || id === 'home') S.quiz = null; return go(id);
+    case 'import': return document.getElementById('file-book').click();
+    case 'import-progress': return document.getElementById('file-progress').click();
+    case 'export': return exportProgress();
+    case 'theme': setTheme(id); return render('none');
+    case 'open-sec': {
+      S.readSection = id;
+      if (S.screen === 'section') return render(t.dataset.dir === 'back' ? 'back' : 'fwd');
+      return go('section');
+    }
+    case 'drill-sec': return startQuiz(shuffle(S.book.questions.filter(q => q.section === id)));
+    case 'ch-all': d.chapters = []; return render('none');
+    case 'acc': {
+      const box = t.closest('.acc'), open = !box.classList.contains('open');
+      box.classList.toggle('open', open);
+      t.setAttribute('aria-expanded', open);
+      if (open) S.open.add(id); else S.open.delete(id);
+      return;
+    }
+    case 'part': {
+      const ids = parts().find(p => p.id === id).chapters.map(c => c.id);
+      const all = ids.every(x => d.chapters.includes(x));
+      d.chapters = all ? d.chapters.filter(x => !ids.includes(x)) : [...new Set([...d.chapters, ...ids])];
+      return render('none');
+    }
+    case 'ch': d.chapters = d.chapters.includes(id) ? d.chapters.filter(x => x !== id) : [...d.chapters, id]; return render('none');
+    case 'mode': d.mode = id; return render('none');
+    case 'count': d.count = Number(id); return render('none');
+    case 'start': {
+      const pool = shuffle(drillPool());
+      return startQuiz(d.count ? pool.slice(0, d.count) : pool);
+    }
+    case 'pick': { const q = S.quiz.items[S.quiz.i].q; return answer(Number(id) === q.answer, Number(id)); }
+    case 'pick-tf': { const q = S.quiz.items[S.quiz.i].q; const v = id === 'true'; return answer(v === q.answer, v); }
+    case 'check-calc': {
+      const q = S.quiz.items[S.quiz.i].q, raw = document.getElementById('num-in').value, v = parseNum(raw);
+      if (isNaN(v)) return toast('数字で入力してください');
+      const tol = q.tol ?? (Math.abs(q.answer) < 100 ? 0.05 : Math.abs(q.answer) * 0.005);
+      return answer(Math.abs(v - q.answer) <= tol, raw);
+    }
+    case 'ord-add': { const it = S.quiz.items[S.quiz.i]; it.chosen.push(Number(id)); return renderQuestion(false); }
+    case 'ord-del': { const it = S.quiz.items[S.quiz.i]; it.chosen.splice(Number(id), 1); return renderQuestion(false); }
+    case 'check-order': {
+      const it = S.quiz.items[S.quiz.i];
+      return answer(it.chosen.every((c, n) => c === n), null);
+    }
+    case 'next':
+      S.quiz.i++; S.quiz.answered = null;
+      if (S.quiz.i >= S.quiz.items.length) return go('result');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return renderQuestion(true);
+    case 'retry': {
+      const ids = S.quiz.results.filter(r => !r.ok).map(r => r.id);
+      return startQuiz(shuffle(S.book.questions.filter(q => ids.includes(q.id))));
+    }
+    case 'quit': S.quiz = null; return go('drill');
+    case 'peek': S.readSection = id; S.peekFromQuiz = true; return go('section');
+  }
+});
+app.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'num-in') document.querySelector('[data-act="check-calc"]')?.click();
+});
+// 要点をのぞいた後は、戻るボタンで問題に戻す
+app.addEventListener('click', e => {
+  const b = e.target.closest('.topbar .round[data-id="learn"]');
+  if (b && S.peekFromQuiz && S.quiz) { e.stopImmediatePropagation(); S.peekFromQuiz = false; S.screen = 'quiz'; render('back'); }
+}, true);
+
+// 横にはみ出す表には、スクロールできることを知らせる
+function hintTables() {
+  app.querySelectorAll('.tbl-wrap').forEach(w => {
+    if (w.scrollWidth > w.clientWidth + 2 && !w.nextElementSibling?.classList.contains('tbl-hint')) w.insertAdjacentHTML('afterend', '<div class="tbl-hint">← 横にスクロールできます →</div>');
+  });
+}
+function onScroll() { app.querySelector('.topbar, .qbar')?.classList.toggle('stuck', window.scrollY > 4); }
+window.addEventListener('scroll', onScroll, { passive: true });
+const _render = render;
+render = (...a) => { _render(...a); hintTables(); onScroll(); };
+
+(async () => {
+  S.book = await dbGet('book') || null;
+  S.progress = await dbGet('progress') || {};
+  render('fwd');
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+})();
+</script>
+</body>
+</html>

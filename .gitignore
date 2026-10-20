@@ -1,0 +1,3 @@
+# 参考書のデータは絶対にアップロードしない
+*.json
+!manifest.webmanifest

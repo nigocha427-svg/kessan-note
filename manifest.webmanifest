@@ -1,0 +1,16 @@
+{
+  "name": "決算ノート",
+  "short_name": "決算ノート",
+  "description": "手持ちの参考書のデータで、決算書の読み方を図解と問題演習で学ぶ個人用アプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0017C1",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
